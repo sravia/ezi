@@ -24,7 +24,8 @@ router.get('/authenticate', (req, res) => {
     var token = jwt.sign({_id: req.user.id}, config.jwtSecretKey, {expiresIn: config.jwtExpireTime})
     return res.status(200).send({
       token: token,
-      success: true
+      success: true,
+      user: req.user
     });
   } else {
     return res.status(200).send({
@@ -35,16 +36,22 @@ router.get('/authenticate', (req, res) => {
 
 router.post('/login', function(req, res, next) {
   passport.authenticate('local-login', function(err, user, status) {
-    req.logIn(user, function(err) {
-      if (err) { return next(err); }
-      delete user['password']
-      var token = jwt.sign({_id: req.user.id}, config.jwtSecretKey, {expiresIn: config.jwtExpireTime});
-      res.cookie('token', token)
-      return res.status(200).send({
-        token: 'JWT ' + token,
-        status : status
+    if(user){
+      req.logIn(user, function(err) {
+        if (err) { return next(err); }
+        var token = jwt.sign({_id: req.user.id}, config.jwtSecretKey, {expiresIn: config.jwtExpireTime});
+        res.cookie('token', token)
+        return res.status(200).send({
+          token: 'JWT ' + token,
+          status : status
+        });
       });
-    });
+    }else{
+      console.log(status);
+      res.status(200).send({
+        status
+      });
+    }
   })(req, res, next);
 });
 

@@ -438,17 +438,22 @@ var AuthService = (function () {
             return false;
         });
     };
-    AuthService.prototype.login = function (email, password) {
+    AuthService.prototype.login = function (form) {
         var _this = this;
-        this.http.post(this.API + '/login', { email: email, password: password })
+        this.http.post(this.API + '/login', form)
             .map(function (res) { return res.json(); })
             .subscribe(function (res) { return _this.handleLogin.call(_this, res); }, function (err) { return _this.error = JSON.parse(err._body).msg; });
     };
     AuthService.prototype.signup = function (user) {
+        var _this = this;
         this.http.post(this.API + '/signup', user)
             .toPromise()
             .then(function (res) {
-            console.log(res);
+            var formattedRes = JSON.parse(res["_body"]);
+            _this.error = formattedRes.message;
+            if (formattedRes.success) {
+                _this.login(user);
+            }
             return false;
         });
     };
@@ -463,14 +468,33 @@ var AuthService = (function () {
             localStorage.removeItem('id_token');
         });
     };
+    AuthService.prototype.updateProfile = function (form) {
+        var _this = this;
+        var body = JSON.stringify(form);
+        var headers = new __WEBPACK_IMPORTED_MODULE_6__angular_http__["Headers"]();
+        headers.append('Content-Type', 'application/json');
+        var options = new __WEBPACK_IMPORTED_MODULE_6__angular_http__["RequestOptions"]({ headers: headers });
+        return this.http.post(this.API + '/profile', body, options).map(function (res) { return _this.setProfile(res); });
+    };
+    AuthService.prototype.setProfile = function (res) {
+        var body = JSON.parse(res["_body"]);
+        this.user = body['user'];
+        return body;
+    };
+    AuthService.prototype.getUser = function () {
+        return this.user;
+    };
     AuthService.prototype.setAuthenticatedUser = function (res) {
-        console.log(res);
         this.loggedIn = true;
         localStorage['id_token'] = res.token;
     };
     AuthService.prototype.handleLogin = function (res) {
-        this.setAuthenticatedUser(res);
-        this.router.navigate(['/home']);
+        console.log(res.status.message);
+        this.error = res.status.message;
+        if (res.status.success) {
+            this.setAuthenticatedUser(res);
+            this.router.navigate(['/home']);
+        }
     };
     AuthService = __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["Injectable"])(),
@@ -534,7 +558,7 @@ var AuthenticatedGuard = (function () {
 /***/ "../../../../../src/app/user/login/login.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<div class=\"container\">\n    <div class=\"row\">\n        <div class=\"col\">\n            <form  (ngSubmit)=\"login()\">\n                <div class=\"form-group\">\n                    <input type=\"email\" [(ngModel)]=\"email\" class=\"form-control\" id=\"email\" placeholder=\"Email address\">\n                </div>\n                <div class=\"form-group\">\n                    <input type=\"password\"  [(ngModel)]=\"password\" class=\"form-control\" id=\"password\" placeholder=\"Password\">\n                </div>\n                <button type=\"submit\" class=\"login\">Log in</button>\n            </form>\n            <a href=\"/api/user/auth/facebook\">Log in with Facebook</a>\n        </div>\n    </div>\n    \n    <div class=\"row\">\n        <div class=\"col\">\n            <span>Don't have an account? </span><a href=\"#\" [routerLink]=\"['/user/signup']\">Sign up</a>\n        </div>\n    </div>\n</div>"
+module.exports = "<div class=\"container\">\n    <div class=\"row\">\n        <div class=\"col\">\n            <form [formGroup]=\"loginForm\" (submit)=\"login()\">\n                <div class=\"form-group\">\n                    <input \n                    class=\"form-control\" \n                    id=\"email\"\n                    name=\"email\"\n                    [formControl]=\"loginForm.get('email')\"  placeholder=\"Email address\"/>\n                </div>\n                <div class=\"form-group\">\n                    <input \n                    class=\"form-control\" \n                    id=\"password\"\n                    name=\"password\"\n                    type=\"password\"\n                    [formControl]=\"loginForm.get('password')\"  placeholder=\"Password\"/>\n                </div>\n                <div *ngIf=\"authService.error\" class=\"alert alert-danger\">\n                    {{authService.error}}\n                </div>\n                <button\n                    class=\"button\"\n                    type=\"submit\">\n                    Log in\n                </button>\n            </form>\n            <a href=\"/api/user/auth/facebook\">Log in with Facebook</a>\n        </div>\n    </div>\n    \n    <div class=\"row\">\n        <div class=\"col\">\n            <span>Don't have an account? </span><a href=\"#\" [routerLink]=\"['/user/signup']\">Sign up</a>\n        </div>\n    </div>\n</div>"
 
 /***/ }),
 
@@ -546,7 +570,7 @@ exports = module.exports = __webpack_require__("../../../../css-loader/lib/css-b
 
 
 // module
-exports.push([module.i, ".container {\n  width: 350px; }\n  .container .row {\n    background-color: white;\n    border: 1px solid #e6e6e6;\n    padding: 10px 0; }\n    .container .row:last-child {\n      margin-top: 10px;\n      color: #262626;\n      font-size: 14px;\n      padding: 15px;\n      text-align: center; }\n  .container form .form-group {\n    border: 1px solid #efefef;\n    width: 260px;\n    margin: 0 30px 6px; }\n    .container form .form-group input {\n      outline: none;\n      overflow: hidden;\n      padding: 9px 0 7px 8px;\n      background: #fafafa;\n      font-size: 14px;\n      border: 0;\n      height: 35px;\n      border: 1px solid white;\n      border-radius: 0; }\n      .container form .form-group input:focus {\n        border: 1px solid #b2b2b2;\n        border-radius: 0;\n        outline: none; }\n  .container form .login {\n    background: #3897f0;\n    border-color: #3897f0;\n    color: #fff;\n    border-radius: 3px;\n    border-style: solid;\n    border-width: 1px;\n    font-size: 14px;\n    font-weight: 600;\n    line-height: 26px;\n    width: 100%;\n    cursor: pointer;\n    width: 260px;\n    margin-left: 30px; }\n", ""]);
+exports.push([module.i, ".container {\n  width: 350px; }\n  .container .row {\n    background-color: white;\n    border: 1px solid #e6e6e6;\n    padding: 10px 0; }\n    .container .row:last-child {\n      margin-top: 10px;\n      color: #262626;\n      font-size: 14px;\n      padding: 15px;\n      text-align: center; }\n", ""]);
 
 // exports
 
@@ -561,8 +585,9 @@ module.exports = module.exports.toString();
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return LoginComponent; });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__angular_core__ = __webpack_require__("../../../core/@angular/core.es5.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__angular_forms__ = __webpack_require__("../../../forms/@angular/forms.es5.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__auth_service__ = __webpack_require__("../../../../../src/app/user/auth.service.ts");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__angular_core__ = __webpack_require__("../../../core/@angular/core.es5.js");
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -574,26 +599,41 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 
 
+
 var LoginComponent = (function () {
-    function LoginComponent(authService) {
+    function LoginComponent(authService, _fb) {
         this.authService = authService;
+        this._fb = _fb;
     }
     LoginComponent.prototype.login = function () {
-        this.authService.login(this.email, this.password);
+        var form = this.loginForm.value;
+        this.authService.login(form);
     };
     LoginComponent.prototype.ngOnDestroy = function () {
         this.authService.error = null;
     };
+    LoginComponent.prototype.ngOnInit = function () {
+        this.loginForm = this._fb.group({
+            'email': ['', [
+                    __WEBPACK_IMPORTED_MODULE_0__angular_forms__["f" /* Validators */].required
+                ]],
+            'password': ['', [
+                    __WEBPACK_IMPORTED_MODULE_0__angular_forms__["f" /* Validators */].required,
+                    __WEBPACK_IMPORTED_MODULE_0__angular_forms__["f" /* Validators */].minLength(6)
+                ]]
+        });
+    };
+    ;
     LoginComponent = __decorate([
-        Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["Component"])({
+        Object(__WEBPACK_IMPORTED_MODULE_2__angular_core__["Component"])({
             selector: 'login',
             template: __webpack_require__("../../../../../src/app/user/login/login.component.html"),
             styles: [__webpack_require__("../../../../../src/app/user/login/login.component.scss")]
         }),
-        __metadata("design:paramtypes", [typeof (_a = typeof __WEBPACK_IMPORTED_MODULE_1__auth_service__["a" /* AuthService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_1__auth_service__["a" /* AuthService */]) === "function" && _a || Object])
+        __metadata("design:paramtypes", [typeof (_a = typeof __WEBPACK_IMPORTED_MODULE_1__auth_service__["a" /* AuthService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_1__auth_service__["a" /* AuthService */]) === "function" && _a || Object, typeof (_b = typeof __WEBPACK_IMPORTED_MODULE_0__angular_forms__["a" /* FormBuilder */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_0__angular_forms__["a" /* FormBuilder */]) === "function" && _b || Object])
     ], LoginComponent);
     return LoginComponent;
-    var _a;
+    var _a, _b;
 }());
 
 ;
@@ -655,7 +695,25 @@ var ProfileComponent = (function () {
 /***/ "../../../../../src/app/user/signup/signup.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "      <form novalidate [formGroup]=\"signupForm\" (submit)=\"signup()\">\r\n        <div\r\n          class=\"form-group\"\r\n          [class.has-error]=\"!signupForm.get('email').valid\r\n            && signupForm.get('email').touched\">\r\n          <label class=\"control-label\" for=\"email\">\r\n            <strong>Email *</strong>\r\n          </label>\r\n          <input\r\n            class=\"form-control\" \r\n            id=\"email\"\r\n            name=\"email\"\r\n            [formControl]=\"signupForm.get('email')\"/>\r\n          <span\r\n            class=\"help-block\"\r\n            *ngIf=\"signupForm.get('email').hasError('required')\r\n              && signupForm.get('email').touched\">\r\n              email is required\r\n          </span>\r\n          <span\r\n            class=\"help-block\"\r\n            *ngIf=\"signupForm.get('email').hasError('pattern')\r\n              && signupForm.get('email').touched\">\r\n            Must be a proper email\r\n          </span>\r\n        </div>\r\n        <div\r\n          class=\"form-group\"\r\n          [class.has-error]=\"!signupForm.get('password').valid\r\n            && signupForm.get('password').touched\">\r\n          <label class=\"control-label\" for=\"password\">\r\n            <strong>Password *</strong>\r\n          </label>\r\n          <input \r\n            class=\"form-control\" \r\n            id=\"password\"\r\n            name=\"password\"\r\n            type=\"password\"\r\n            [formControl]=\"signupForm.get('password')\"/>\r\n          <span\r\n            class=\"help-block\"\r\n            *ngIf=\"signupForm.get('password').hasError('required')\r\n              && signupForm.get('password').touched\">\r\n            Password is required\r\n          </span>\r\n          <span\r\n            class=\"help-block\"\r\n            *ngIf=\"signupForm.get('password').hasError('minlength')\r\n              && signupForm.get('password').touched\">\r\n            Password requires at least six characters\r\n          </span>\r\n        </div>\r\n        <div \r\n          class=\"form-group\"\r\n          [class.has-error]=\"!signupForm.get('confirmPassword').valid\r\n            && signupForm.get('confirmPassword').touched\">\r\n          <label class=\"control-label\" for=\"confirmPassword\">\r\n            <strong>Confirm Password *</strong>\r\n          </label>\r\n          <input\r\n            class=\"form-control\" \r\n            id=\"confirmPassword\"\r\n            name=\"confirmPassword\"\r\n            type=\"password\"\r\n            [formControl]=\"signupForm.get('confirmPassword')\"/>\r\n          <span\r\n            class=\"help-block\"\r\n            *ngIf=\"signupForm.get('confirmPassword').hasError('required')\r\n              && signupForm.get('confirmPassword').touched\">\r\n            Password is required\r\n          </span>\r\n          <span\r\n            class=\"help-block\"\r\n            *ngIf=\"signupForm.get('confirmPassword').hasError('minlength')\r\n              && signupForm.get('confirmPassword').touched\">\r\n            Password requires at least six characters\r\n          </span>\r\n        </div>\r\n        <div *ngIf=\"authService.error\" class=\"alert alert-danger\">\r\n          {{authService.error}}\r\n        </div>\r\n        <button\r\n          class=\"btn btn-primary\"\r\n          type=\"submit\"\r\n          [disabled]=\"signupForm.invalid\">\r\n          Sign Up!\r\n        </button>\r\n      </form>"
+module.exports = "<div class=\"container\">\r\n  <div class=\"row\">\r\n    <div class=\"col\">\r\n        <form novalidate [formGroup]=\"signupForm\" (submit)=\"signup()\">\r\n          <div class=\"form-group\" [class.has-error]=\"!signupForm.get('email').valid && signupForm.get('email').touched\">\r\n            <input class=\"form-control\" id=\"email\" name=\"email\" [formControl]=\"signupForm.get('email')\" placeholder=\"Email address\"/>\r\n            <span class=\"help-block\" *ngIf=\"signupForm.get('email').hasError('pattern') && signupForm.get('email').touched\">\r\n              Must be a proper email\r\n            </span>\r\n          </div>\r\n          <div class=\"form-group\" [class.has-error]=\"!signupForm.get('password').valid && signupForm.get('password').touched\">\r\n            <input  class=\"form-control\" id=\"password\" name=\"password\" type=\"password\" [formControl]=\"signupForm.get('password')\" placeholder=\"Password\"/>\r\n            <span class=\"help-block\" *ngIf=\"signupForm.get('password').hasError('required') && signupForm.get('password').touched\">\r\n              Password is required\r\n            </span>\r\n            <span class=\"help-block\" *ngIf=\"signupForm.get('password').hasError('minlength') && signupForm.get('password').touched\">\r\n              Password requires at least six characters\r\n            </span>\r\n          </div>\r\n          <div class=\"form-group\" [class.has-error]=\"!signupForm.get('confirmPassword').valid && signupForm.get('confirmPassword').touched\">\r\n            <input class=\"form-control\" id=\"confirmPassword\" name=\"confirmPassword\" type=\"password\" [formControl]=\"signupForm.get('confirmPassword')\" placeholder=\"Confirm password\"/>\r\n            <span class=\"help-block\" *ngIf=\"signupForm.get('confirmPassword').hasError('required') && signupForm.get('confirmPassword').touched\">\r\n              Password is required\r\n            </span>\r\n            <span class=\"help-block\" *ngIf=\"signupForm.get('confirmPassword').hasError('minlength') && signupForm.get('confirmPassword').touched\">\r\n              Password requires at least six characters\r\n            </span>\r\n          </div>\r\n          <div *ngIf=\"authService.error\" class=\"alert alert-danger\">\r\n            {{authService.error}}\r\n          </div>\r\n          <button class=\"button\" type=\"submit\" [disabled]=\"signupForm.invalid\">\r\n            Sign Up!\r\n          </button>\r\n        </form>\r\n    </div>\r\n  </div>\r\n</div>"
+
+/***/ }),
+
+/***/ "../../../../../src/app/user/signup/signup.component.scss":
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__("../../../../css-loader/lib/css-base.js")(false);
+// imports
+
+
+// module
+exports.push([module.i, ".container {\n  width: 350px; }\n  .container .row {\n    background-color: white;\n    border: 1px solid #e6e6e6;\n    padding: 10px 0; }\n    .container .row:last-child {\n      margin-top: 10px;\n      color: #262626;\n      font-size: 14px;\n      padding: 15px;\n      text-align: center; }\n", ""]);
+
+// exports
+
+
+/*** EXPORTS FROM exports-loader ***/
+module.exports = module.exports.toString();
 
 /***/ }),
 
@@ -706,7 +764,8 @@ var SignupComponent = (function () {
     SignupComponent = __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["Component"])({
             selector: 'signup',
-            template: __webpack_require__("../../../../../src/app/user/signup/signup.component.html")
+            template: __webpack_require__("../../../../../src/app/user/signup/signup.component.html"),
+            styles: [__webpack_require__("../../../../../src/app/user/signup/signup.component.scss")]
         }),
         __metadata("design:paramtypes", [typeof (_a = typeof __WEBPACK_IMPORTED_MODULE_2__auth_service__["a" /* AuthService */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_2__auth_service__["a" /* AuthService */]) === "function" && _a || Object, typeof (_b = typeof __WEBPACK_IMPORTED_MODULE_1__angular_forms__["a" /* FormBuilder */] !== "undefined" && __WEBPACK_IMPORTED_MODULE_1__angular_forms__["a" /* FormBuilder */]) === "function" && _b || Object])
     ], SignupComponent);

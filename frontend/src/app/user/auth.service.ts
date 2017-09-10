@@ -13,6 +13,7 @@ export class AuthService {
   public loggedIn = false;
   private _jwtHelper: JwtHelper = new JwtHelper();
   private API = "/api/user";
+  private user;
 
   constructor(private http: Http, private router: Router) {
     this.getAuthenticatedState();
@@ -34,8 +35,8 @@ export class AuthService {
       });
   }
 
-  public login(email: string, password: string): void {
-    this.http.post(this.API+'/login', {email, password})
+  public login(form): void {
+    this.http.post(this.API+'/login', form)
     .map(res => res.json())
     .subscribe(res => this.handleLogin.call(this, res),
               err => this.error = JSON.parse(err._body).msg);
@@ -45,7 +46,11 @@ export class AuthService {
     this.http.post(this.API+'/signup', user)
     .toPromise()
       .then(res => {
-        console.log(res);
+        var formattedRes = JSON.parse(res["_body"]);
+        this.error = formattedRes.message;
+        if(formattedRes.success){
+          this.login(user);
+        }
         return false;
       });
   }
@@ -62,15 +67,40 @@ export class AuthService {
       });
   }
 
+  public updateProfile(form): Observable<boolean> {
+    let body = JSON.stringify(form);
+    let headers = new Headers();
+        headers.append('Content-Type', 'application/json');
+    let options = new RequestOptions({ headers: headers });
+    return this.http.post(this.API+'/profile', body, options).map( (res) => this.setProfile(res) );
+  }
+
+
+  public setProfile(res) {
+    let body = JSON.parse(res["_body"]);
+    this.user = body['user'];
+    return body;
+  }
+
+  public getUser(){
+    return this.user;
+  }
+
   public setAuthenticatedUser(res) {
-    console.log(res);    
     this.loggedIn = true;
     localStorage['id_token'] = res.token;
   }
 
   private handleLogin(res): void {
-    this.setAuthenticatedUser(res);
-    this.router.navigate(['/home']);    
+    console.log(res.status.message);
+    
+    this.error = res.status.message;
+    if(res.status.success){
+      this.setAuthenticatedUser(res);
+      this.router.navigate(['/home']); 
+    }
+       
   }
 
 }
+ 
